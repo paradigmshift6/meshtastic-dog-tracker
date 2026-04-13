@@ -20,7 +20,7 @@ actor MeshtasticRadio {
     // MARK: - Private state
 
     private let transport: RadioTransport
-    private let log = Logger(subsystem: "com.example.DogTracker", category: "Radio")
+    private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "Radio")
     private var consumer: Task<Void, Never>?
     private var pendingWantConfigID: UInt32 = 0
     private var subscribers: [AsyncStream<RadioEvent>.Continuation] = []

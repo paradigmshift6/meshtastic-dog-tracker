@@ -8,7 +8,7 @@ import OSLog
 /// Used by the tile downloader (phase 9) and read by MapLibre at runtime
 /// via file:// URL with mbtiles source type.
 final class MBTilesWriter {
-    private let log = Logger(subsystem: "com.example.DogTracker", category: "MBTiles")
+    private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "MBTiles")
     private var db: OpaquePointer?
     private var insertStmt: OpaquePointer?
 

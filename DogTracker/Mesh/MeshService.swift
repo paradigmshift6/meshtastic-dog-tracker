@@ -21,7 +21,7 @@ final class MeshService {
 
     private let radio: RadioController
     private let modelContainer: ModelContainer
-    private let log = Logger(subsystem: "com.example.DogTracker", category: "Mesh")
+    private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "Mesh")
     private var consumer: Task<Void, Never>?
 
     init(radio: RadioController, modelContainer: ModelContainer) {

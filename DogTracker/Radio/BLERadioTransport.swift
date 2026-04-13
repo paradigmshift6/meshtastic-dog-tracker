@@ -28,7 +28,7 @@ final class BLERadioTransport: NSObject, RadioTransport, @unchecked Sendable {
     static let fromRadioCharUUID = CBUUID(string: "2c55e69e-4993-11ed-b878-0242ac120002")
     static let fromNumCharUUID   = CBUUID(string: "ed9da18c-a800-4f66-a670-aa7547e34453")
 
-    private static let restoreIdentifier = "com.example.DogTracker.bleRestore"
+    private static let restoreIdentifier = "com.levijohnson.DogTracker.bleRestore"
 
     // MARK: - Public
 
@@ -37,8 +37,8 @@ final class BLERadioTransport: NSObject, RadioTransport, @unchecked Sendable {
 
     // MARK: - Internal state (queue-confined)
 
-    private let log = Logger(subsystem: "com.example.DogTracker", category: "BLE")
-    private let queue = DispatchQueue(label: "com.example.DogTracker.ble", qos: .userInitiated)
+    private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "BLE")
+    private let queue = DispatchQueue(label: "com.levijohnson.DogTracker.ble", qos: .userInitiated)
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var toRadioChar: CBCharacteristic?

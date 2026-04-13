@@ -12,7 +12,7 @@ import OSLog
 /// flip Y when writing:  tmsY = (1 << z) - 1 - xyzY
 actor TileDownloader {
 
-    private let log = Logger(subsystem: "com.example.DogTracker", category: "TileDownloader")
+    private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "TileDownloader")
     private let session: URLSession
     private let baseURL = "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile"
 

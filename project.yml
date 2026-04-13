@@ -1,6 +1,6 @@
 name: DogTracker
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.levijohnson
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -58,10 +58,11 @@ targets:
           - location
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.DogTracker
+        PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTracker
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: LV3P9K7AFP
   DogTrackerTests:
     type: bundle.unit-test
     platform: iOS
@@ -71,7 +72,7 @@ targets:
       - target: DogTracker
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.DogTrackerTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTrackerTests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
   DogTracker:
