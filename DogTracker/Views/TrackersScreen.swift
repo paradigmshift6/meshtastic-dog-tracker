@@ -177,6 +177,8 @@ private struct MeshNodeRow: View {
 struct TrackerDetailScreen: View {
     @Bindable var tracker: Tracker
     @State private var photoItem: PhotosPickerItem?
+    @State private var rawPhotoImage: UIImage?
+    @State private var showCropSheet = false
 
     var body: some View {
         Form {
@@ -194,6 +196,14 @@ struct TrackerDetailScreen: View {
             }
         }
         .navigationTitle(tracker.name)
+        .sheet(isPresented: $showCropSheet) {
+            if let img = rawPhotoImage {
+                PhotoCropView(image: img) { cropped in
+                    tracker.photoData = cropped.jpegData(compressionQuality: 0.8)
+                    showCropSheet = false
+                }
+            }
+        }
     }
 
     @ViewBuilder private var photoSection: some View {
@@ -207,8 +217,10 @@ struct TrackerDetailScreen: View {
         PhotosPicker("Choose photo", selection: $photoItem, matching: .images)
             .onChange(of: photoItem) { _, item in
                 Task {
-                    if let data = try? await item?.loadTransferable(type: Data.self) {
-                        tracker.photoData = compressPhoto(data)
+                    if let data = try? await item?.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        rawPhotoImage = img
+                        showCropSheet = true
                     }
                 }
             }
@@ -218,15 +230,117 @@ struct TrackerDetailScreen: View {
             }
         }
     }
+}
 
-    private func compressPhoto(_ data: Data) -> Data? {
-        guard let img = UIImage(data: data) else { return nil }
-        let size = CGSize(width: 256, height: 256)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let resized = renderer.image { _ in
-            img.draw(in: CGRect(origin: .zero, size: size))
+// MARK: - Photo crop view (move & scale)
+
+/// A simple move-and-scale photo cropper. The user drags and pinches the image
+/// inside a circular crop area, then taps Use Photo.
+private struct PhotoCropView: View {
+    let image: UIImage
+    let onCrop: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    private let outputSize: CGFloat = 256
+    private let cropDiameter: CGFloat = 280
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Spacer()
+                ZStack {
+                    // Image behind the crop circle
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: cropDiameter, height: cropDiameter)
+                        .scaleEffect(scale)
+                        .offset(offset)
+                        .clipShape(Circle())
+                        .gesture(dragGesture)
+                        .gesture(pinchGesture)
+
+                    // Circle border
+                    Circle()
+                        .stroke(Color.white, lineWidth: 3)
+                        .frame(width: cropDiameter, height: cropDiameter)
+                        .allowsHitTesting(false)
+                }
+                Text("Move and Scale")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 16)
+                Spacer()
+            }
+            .background(Color.black)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Use Photo") { cropAndFinish() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
-        return resized.jpegData(compressionQuality: 0.8)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                offset = CGSize(
+                    width: lastOffset.width + value.translation.width,
+                    height: lastOffset.height + value.translation.height
+                )
+            }
+            .onEnded { _ in lastOffset = offset }
+    }
+
+    private var pinchGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                scale = max(0.5, lastScale * value.magnification)
+            }
+            .onEnded { _ in
+                scale = max(0.5, scale)
+                lastScale = scale
+            }
+    }
+
+    private func cropAndFinish() {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: outputSize, height: outputSize))
+        let cropped = renderer.image { ctx in
+            let drawSize = cropDiameter * scale
+            let imgAspect = image.size.width / image.size.height
+            let drawW: CGFloat
+            let drawH: CGFloat
+            if imgAspect > 1 {
+                drawH = drawSize
+                drawW = drawSize * imgAspect
+            } else {
+                drawW = drawSize
+                drawH = drawSize / imgAspect
+            }
+
+            // Map the offset from view coordinates to the render output
+            let scaleFactor = outputSize / cropDiameter
+            let x = (outputSize - drawW * scaleFactor) / 2 + offset.width * scaleFactor
+            let y = (outputSize - drawH * scaleFactor) / 2 + offset.height * scaleFactor
+
+            // Clip to circle
+            UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: outputSize, height: outputSize)).addClip()
+            image.draw(in: CGRect(x: x, y: y, width: drawW * scaleFactor, height: drawH * scaleFactor))
+        }
+        onCrop(cropped)
     }
 }
 

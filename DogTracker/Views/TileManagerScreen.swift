@@ -47,6 +47,10 @@ struct TileManagerScreen: View {
     private func deleteRegions(at offsets: IndexSet) {
         guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
             .appendingPathComponent("TileRegions") else { return }
+
+        // Tell the map to release its SQLite handle before we delete the file
+        NotificationCenter.default.post(name: .willDeleteTileRegion, object: nil)
+
         for i in offsets {
             let region = regions[i]
             let file = dir.appendingPathComponent(region.filename)
@@ -54,6 +58,9 @@ struct TileManagerScreen: View {
             modelContext.delete(region)
         }
         try? modelContext.save()
+
+        // Let the map reload with remaining tiles or online fallback
+        NotificationCenter.default.post(name: .didDeleteTileRegion, object: nil)
     }
 }
 

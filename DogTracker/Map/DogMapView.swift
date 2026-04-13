@@ -1,6 +1,12 @@
 import SwiftUI
 import MapLibre
 
+/// Posted before an mbtiles file is deleted so the map can release its SQLite handle.
+extension Notification.Name {
+    static let willDeleteTileRegion = Notification.Name("willDeleteTileRegion")
+    static let didDeleteTileRegion = Notification.Name("didDeleteTileRegion")
+}
+
 /// SwiftUI wrapper around MapLibre's `MLNMapView`. Shows:
 ///   - USGS topo tiles: offline MBTiles when available, online fallback otherwise.
 ///   - The user's current location (built-in blue dot).
@@ -38,8 +44,34 @@ struct DogMapView: UIViewRepresentable {
         private var currentAnnotations: [String: MLNPointAnnotation] = [:]
         private var markerColors: [String: String] = [:]
         private var tileSourceAdded = false
+        /// Path of the currently loaded mbtiles file, so we know if it changed.
+        private var loadedMBTilesPath: String?
+        private weak var mapViewRef: MLNMapView?
+
+        override init() {
+            super.init()
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(handleWillDeleteTiles),
+                name: .willDeleteTileRegion, object: nil
+            )
+        }
+
+        /// Remove the tile source before the mbtiles file is deleted to prevent
+        /// MapLibre's SQLite handle from crashing on a deleted vnode.
+        @objc private func handleWillDeleteTiles() {
+            guard let style = mapViewRef?.style else { return }
+            if let layer = style.layer(withIdentifier: "usgs-topo-layer") {
+                style.removeLayer(layer)
+            }
+            if let source = style.source(withIdentifier: "usgs-topo") {
+                style.removeSource(source)
+            }
+            loadedMBTilesPath = nil
+            tileSourceAdded = false
+        }
 
         func updateMarkers(on mapView: MLNMapView, markers: [DogMarker]) {
+            mapViewRef = mapView
             var nextIDs = Set<String>()
 
             for marker in markers {
@@ -103,9 +135,19 @@ struct DogMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+            mapViewRef = mapView
             guard !tileSourceAdded else { return }
             tileSourceAdded = true
             addTileSource(to: style)
+
+            // Re-add tile source after a deletion
+            NotificationCenter.default.addObserver(
+                forName: .didDeleteTileRegion, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self, !self.tileSourceAdded else { return }
+                self.tileSourceAdded = true
+                self.addTileSource(to: style)
+            }
         }
 
         private func addTileSource(to style: MLNStyle) {
