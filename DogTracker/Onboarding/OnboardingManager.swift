@@ -258,7 +258,6 @@ final class OnboardingManager {
             ConfigItem(label: "Device role", done: false),
             ConfigItem(label: "Position settings", done: false),
             ConfigItem(label: "LoRa radio", done: false),
-            ConfigItem(label: "Primary channel (no position)", done: false),
             ConfigItem(label: "Private channel (full precision)", done: false),
             ConfigItem(label: "Saving", done: false),
         ])
@@ -266,7 +265,6 @@ final class OnboardingManager {
 
         let configurator = DeviceConfigurator(radio: radio.radio)
         let channel = ChannelManager.makePrivateChannel()
-        let primaryCh = ChannelManager.primaryChannelPositionDisabled()
         let nodeNum = connectedNodeNum
         var idx = 0
 
@@ -309,12 +307,7 @@ final class OnboardingManager {
             markProgress(idx); idx += 1
             try await Task.sleep(for: .milliseconds(200))
 
-            // Disable position on primary channel
-            try await configurator.setChannel(primaryCh, on: nodeNum)
-            markProgress(idx); idx += 1
-            try await Task.sleep(for: .milliseconds(200))
-
-            // Private channel with full precision position
+            // Private channel with full 32-bit precision position
             try await configurator.setChannel(channel, on: nodeNum)
             markProgress(idx); idx += 1
             try await Task.sleep(for: .milliseconds(200))
@@ -347,7 +340,6 @@ final class OnboardingManager {
             ConfigItem(label: "Device role (tracker)", done: false),
             ConfigItem(label: "GPS & position broadcasting", done: false),
             ConfigItem(label: "LoRa radio", done: false),
-            ConfigItem(label: "Primary channel (no position)", done: false),
             ConfigItem(label: "Private channel (full precision)", done: false),
             ConfigItem(label: "Saving", done: false),
         ])
@@ -359,7 +351,6 @@ final class OnboardingManager {
             isConfiguring = false
             return
         }
-        let primaryCh = ChannelManager.primaryChannelPositionDisabled()
         let nodeNum = connectedNodeNum
         var idx = 0
 
@@ -406,11 +397,6 @@ final class OnboardingManager {
             lora.hopLimit = 3
             lora.txEnabled = true
             try await configurator.setLoRaConfig(lora, on: nodeNum)
-            markProgress(idx); idx += 1
-            try await Task.sleep(for: .milliseconds(200))
-
-            // Disable position on primary channel so tracker uses private channel
-            try await configurator.setChannel(primaryCh, on: nodeNum)
             markProgress(idx); idx += 1
             try await Task.sleep(for: .milliseconds(200))
 
@@ -485,7 +471,16 @@ final class OnboardingManager {
 
     private func reconnectCompanion() {
         guard let uuid = companionPeripheralUUID else { return }
-        radio.connect(uuid)
+        // Disconnect from tracker first (if still connected), then
+        // wait for the companion to finish rebooting before reconnecting.
+        radio.disconnectForSwitch()
+        Task {
+            // Give the companion time to reboot after commitEdit
+            try? await Task.sleep(for: .seconds(5))
+            // Use autoReconnect which retries if CoreBluetooth can't find it yet
+            UserDefaults.standard.set(uuid.uuidString, forKey: "lastConnectedPeripheralUUID")
+            radio.autoReconnect()
+        }
     }
 }
 
