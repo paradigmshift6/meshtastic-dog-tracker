@@ -149,11 +149,24 @@ struct CompassScreen: View {
                         pingError = "Send failed: \(error.localizedDescription)"
                         return
                     }
-                    try? await Task.sleep(for: .seconds(30))
-                    if !Task.isCancelled { isPinging = false }
+                    // Tracker-role nodes broadcast on a timer (not direct responses).
+                    // Poll for up to 2.5 minutes to catch the next broadcast.
+                    let startTime = Date()
+                    for _ in 0..<150 {
+                        try? await Task.sleep(for: .seconds(1))
+                        if Task.isCancelled { return }
+                        if let node = mesh.nodes[tracker.nodeNum],
+                           let t = node.lastPositionUpdate, t > startTime {
+                            isPinging = false
+                            pingError = nil
+                            return
+                        }
+                    }
+                    isPinging = false
+                    pingError = "No position update (timeout)"
                 }
             } label: {
-                Label(isPinging ? "Pinging…" : "Ping \(tracker.name)",
+                Label(isPinging ? "Waiting for position…" : "Ping \(tracker.name)",
                       systemImage: "location.magnifyingglass")
                     .frame(maxWidth: .infinity)
             }
@@ -161,6 +174,11 @@ struct CompassScreen: View {
             .controlSize(.large)
             .disabled(isPinging)
 
+            if isPinging {
+                Text("Waiting for tracker broadcast…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if let pingError {
                 Text(pingError)
                     .font(.caption)

@@ -224,7 +224,7 @@ final class MeshService {
 
         let lat = Double(position.latitudeI) * 1e-7
         let lon = Double(position.longitudeI) * 1e-7
-        log.info("position from \(nodeNum, format: .hex): \(lat),\(lon) alt=\(position.altitude) time=\(position.time) sats=\(position.satsInView) isResponse=\(isResponse)")
+        log.info("position from \(nodeNum, format: .hex): \(lat),\(lon) alt=\(position.altitude) time=\(position.time) sats=\(position.satsInView) precBits=\(position.precisionBits) isResponse=\(isResponse)")
 
         if lat == 0 && lon == 0 {
             log.info("position from \(nodeNum, format: .hex) is 0,0 (no GPS fix)")

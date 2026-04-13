@@ -213,11 +213,12 @@ private struct TrackerSheet: View {
                 pingResult = "Send failed: \(error.localizedDescription)"
                 return
             }
-            // Watch for a new fix
+            // Watch for a new fix — tracker-role nodes broadcast on a timer,
+            // so we may need to wait up to 2.5 minutes for the next position.
             let startTime = Date()
             let nodeNum = tracker.nodeNum
-            for _ in 0..<60 { // poll for 30 seconds
-                try? await Task.sleep(for: .milliseconds(500))
+            for _ in 0..<150 { // poll for up to 2.5 minutes
+                try? await Task.sleep(for: .seconds(1))
                 if let node = mesh.nodes[nodeNum],
                    let t = node.lastPositionUpdate, t > startTime {
                     isPinging = false
