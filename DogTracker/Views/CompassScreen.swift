@@ -133,24 +133,40 @@ struct CompassScreen: View {
 
     @State private var isPinging = false
     @State private var pingTask: Task<Void, Never>?
+    @State private var pingError: String?
 
     private func pingButton(tracker: Tracker) -> some View {
-        Button {
-            pingTask?.cancel()
-            pingTask = Task {
-                isPinging = true
-                _ = try? await mesh.requestPosition(from: tracker.nodeNum)
-                try? await Task.sleep(for: .seconds(30))
-                if !Task.isCancelled { isPinging = false }
+        VStack(spacing: 4) {
+            Button {
+                pingTask?.cancel()
+                pingError = nil
+                pingTask = Task {
+                    isPinging = true
+                    do {
+                        _ = try await mesh.requestPosition(from: tracker.nodeNum)
+                    } catch {
+                        isPinging = false
+                        pingError = "Send failed: \(error.localizedDescription)"
+                        return
+                    }
+                    try? await Task.sleep(for: .seconds(30))
+                    if !Task.isCancelled { isPinging = false }
+                }
+            } label: {
+                Label(isPinging ? "Pinging…" : "Ping \(tracker.name)",
+                      systemImage: "location.magnifyingglass")
+                    .frame(maxWidth: .infinity)
             }
-        } label: {
-            Label(isPinging ? "Pinging…" : "Ping \(tracker.name)",
-                  systemImage: "location.magnifyingglass")
-                .frame(maxWidth: .infinity)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(isPinging)
+
+            if let pingError {
+                Text(pingError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(isPinging)
         .padding(.horizontal)
         .padding(.bottom)
         .onDisappear {

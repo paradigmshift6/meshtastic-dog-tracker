@@ -195,7 +195,13 @@ private struct TrackerSheet: View {
         isPinging = true
         pingResult = nil
         Task {
-            _ = try? await mesh.requestPosition(from: tracker.nodeNum)
+            do {
+                _ = try await mesh.requestPosition(from: tracker.nodeNum)
+            } catch {
+                isPinging = false
+                pingResult = "Send failed: \(error.localizedDescription)"
+                return
+            }
             // Watch for a new fix
             let startTime = Date()
             let nodeNum = tracker.nodeNum

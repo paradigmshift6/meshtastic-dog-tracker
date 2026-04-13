@@ -56,8 +56,10 @@ final class MeshService {
         data.wantResponse = true
 
         var packet = MeshPacket()
+        packet.from = myNodeNum
         packet.to = nodeNum
         packet.wantAck = true
+        packet.hopLimit = 3
         packet.id = packetID
         packet.decoded = data
 
@@ -65,7 +67,7 @@ final class MeshService {
         toRadio.packet = packet
 
         try await radio.radio.sendToRadio(toRadio)
-        log.info("ping sent to \(nodeNum, format: .hex), id=\(packetID)")
+        log.info("ping sent to \(nodeNum, format: .hex), id=\(packetID), hopLimit=3")
         return packetID
     }
 

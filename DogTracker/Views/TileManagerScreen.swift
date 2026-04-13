@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import MapLibre
+import CoreLocation
 
 struct TileManagerScreen: View {
     @Query(sort: \TileRegion.downloadedAt, order: .reverse) private var regions: [TileRegion]
@@ -281,9 +282,10 @@ private struct RegionPickerMap: UIViewRepresentable {
         let map = MLNMapView(frame: .zero)
         map.delegate = context.coordinator
         map.showsUserLocation = true
+        // Center on user's current location if available, otherwise default to US center
+        map.userTrackingMode = .follow
         map.setZoomLevel(10, animated: false)
 
-        // Add online USGS topo so the user can see what they're downloading
         return map
     }
 
@@ -296,9 +298,21 @@ private struct RegionPickerMap: UIViewRepresentable {
     class Coordinator: NSObject, MLNMapViewDelegate {
         let onBoundsChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)) -> Void
         private var tileSourceAdded = false
+        private var hasInitialCenter = false
 
         init(onBoundsChanged: @escaping ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)) -> Void) {
             self.onBoundsChanged = onBoundsChanged
+        }
+
+        func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
+            // Center on user location once, then let them pan freely
+            guard !hasInitialCenter,
+                  let coord = userLocation?.coordinate,
+                  CLLocationCoordinate2DIsValid(coord),
+                  coord.latitude != 0 || coord.longitude != 0 else { return }
+            hasInitialCenter = true
+            mapView.userTrackingMode = .none
+            mapView.setCenter(coord, zoomLevel: 10, animated: true)
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
