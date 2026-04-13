@@ -1,0 +1,6 @@
+Source:  https://github.com/meshtastic/protobufs
+Tag:     v2.7.21
+Date:    2026-04-03
+License: GPL-3.0 (see LICENSE in this directory)
+
+To update: re-run tools/vendor_protos.sh with a new tag.

@@ -1,0 +1,93 @@
+name: DogTracker
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+packages:
+  SwiftProtobuf:
+    url: https://github.com/apple/swift-protobuf
+    exactVersion: 1.36.1
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    minVersion: 6.25.0
+    maxVersion: 7.0.0
+targets:
+  DogTracker:
+    type: application
+    platform: iOS
+    sources:
+      - path: DogTracker
+    dependencies:
+      - package: SwiftProtobuf
+      - package: MapLibre
+        product: MapLibre
+    info:
+      path: DogTracker/Info.plist
+      properties:
+        CFBundleDisplayName: Dog Tracker
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSBluetoothAlwaysUsageDescription: >-
+          Dog Tracker connects to your Meshtastic radio over Bluetooth
+          to receive GPS positions from your dog trackers.
+        NSLocationWhenInUseUsageDescription: >-
+          Your location is shown on the map and used to compute
+          the bearing and distance from you to each dog.
+        NSLocationAlwaysAndWhenInUseUsageDescription: >-
+          Continued location access lets Dog Tracker keep logging
+          your dogs' positions while the screen is off.
+        NSPhotoLibraryUsageDescription: >-
+          Pick a photo of each dog to show on the map marker.
+        UIBackgroundModes:
+          - bluetooth-central
+          - location
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.DogTracker
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+  DogTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DogTrackerTests
+    dependencies:
+      - target: DogTracker
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.DogTrackerTests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  DogTracker:
+    build:
+      targets:
+        DogTracker: all
+        DogTrackerTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - DogTrackerTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

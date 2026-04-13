@@ -1,0 +1,79 @@
+import SwiftUI
+import SwiftData
+
+struct SettingsScreen: View {
+    @Environment(RadioController.self) private var radio
+    @Environment(MeshService.self) private var mesh
+    @Environment(\.modelContext) private var modelContext
+    @Query private var fixes: [Fix]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                radioSection
+                meshSection
+                historySection
+                aboutSection
+            }
+            .navigationTitle("Settings")
+        }
+    }
+
+    private var radioSection: some View {
+        Section("Radio") {
+            NavigationLink {
+                RadioScreen()
+            } label: {
+                LabeledContent("Meshtastic radio", value: shortStatus)
+            }
+        }
+    }
+
+    private var meshSection: some View {
+        Section("Mesh") {
+            LabeledContent("Nodes seen", value: "\(mesh.nodes.count)")
+            if mesh.myNodeNum > 0 {
+                LabeledContent("My node", value: String(format: "!%08x", mesh.myNodeNum))
+            }
+        }
+    }
+
+    private var historySection: some View {
+        Section("History") {
+            LabeledContent("Position fixes stored", value: "\(fixes.count)")
+            if !fixes.isEmpty {
+                Button("Clear all position history", role: .destructive) {
+                    clearHistory()
+                }
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        Section("About") {
+            LabeledContent("Version", value: "0.1.0")
+            LabeledContent("Map data", value: "USGS US Topo (public domain)")
+            LabeledContent("Meshtastic protos", value: "v2.7.21")
+            LabeledContent("License", value: "GPL-3.0")
+        }
+    }
+
+    private var shortStatus: String {
+        switch radio.connectionState {
+        case .disconnected: "Not connected"
+        case .bluetoothUnavailable: "BT off"
+        case .scanning: "Scanning"
+        case .connecting(let n): "Connecting \(n)"
+        case .configuring(let n): "Configuring \(n)"
+        case .connected(let n): n
+        case .failed: "Failed"
+        }
+    }
+
+    private func clearHistory() {
+        for fix in fixes {
+            modelContext.delete(fix)
+        }
+        try? modelContext.save()
+    }
+}
