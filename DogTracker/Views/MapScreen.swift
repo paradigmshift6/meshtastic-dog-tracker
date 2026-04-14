@@ -24,6 +24,7 @@ struct MapScreen: View {
             }
         }
         .overlay(alignment: .bottomTrailing) { pingAllButton }
+        .overlay(alignment: .bottom) { lowBatteryBanner }
     }
 
     // MARK: - Trails
@@ -63,6 +64,11 @@ struct MapScreen: View {
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .foregroundStyle(radioColor)
             Text(radioLabel).font(.caption)
+            if let companion = mesh.nodes[mesh.myNodeNum], let level = companion.batteryLevel, level <= 100 {
+                Image(systemName: level > 25 ? "battery.50" : "battery.25")
+                    .foregroundStyle(level <= 20 ? .red : .secondary)
+                Text("\(level)%").font(.caption2).foregroundStyle(.secondary)
+            }
             Spacer()
             ForEach(trackers) { t in
                 Button {
@@ -99,6 +105,45 @@ struct MapScreen: View {
         case .disconnected: "Disconnected"
         default: "Connecting…"
         }
+    }
+
+    // MARK: - Low battery warning
+
+    @ViewBuilder private var lowBatteryBanner: some View {
+        let lowNodes = lowBatteryNodes
+        if !lowNodes.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "battery.25")
+                    .foregroundStyle(.red)
+                Text(lowBatteryText(lowNodes))
+                    .font(.caption)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 80)
+        }
+    }
+
+    private var lowBatteryNodes: [(String, UInt32)] {
+        var results: [(String, UInt32)] = []
+        // Check companion
+        if let companion = mesh.nodes[mesh.myNodeNum], companion.isBatteryLow,
+           let level = companion.batteryLevel {
+            results.append(("Companion", level))
+        }
+        // Check trackers
+        for tracker in trackers {
+            if let node = mesh.nodes[tracker.nodeNum], node.isBatteryLow,
+               let level = node.batteryLevel {
+                results.append((tracker.name, level))
+            }
+        }
+        return results
+    }
+
+    private func lowBatteryText(_ nodes: [(String, UInt32)]) -> String {
+        nodes.map { "\($0.0) \($0.1)%" }.joined(separator: " · ")
     }
 
     // MARK: - Ping all FAB
@@ -191,6 +236,7 @@ private struct TrackerSheet: View {
             node.longitude.map { ("Lon", String(format: "%.6f", $0)) },
             node.altitude.map { ("Alt", BearingMath.altitudeString($0, useMetric: units.useMetric)) },
             node.positionTime.map { ("Fix age", fixAgeText($0)) },
+            node.batteryLevel.map { ("Battery", $0 > 100 ? "Plugged in" : "\($0)%") },
         ].compactMap { $0 }
         HStack(spacing: 16) {
             ForEach(fields, id: \.0) { label, value in

@@ -27,6 +27,18 @@ struct MeshNode: Identifiable, Sendable {
     var lastHeard: Date?
     var hopsAway: UInt32
 
+    // Battery (from DeviceMetrics telemetry)
+    /// 0–100 percentage, or nil if unknown. Values >100 mean externally powered.
+    var batteryLevel: UInt32?
+    /// Battery voltage in volts, or nil if unknown.
+    var voltage: Float?
+
+    /// True if battery is known and at or below 20%.
+    var isBatteryLow: Bool {
+        guard let level = batteryLevel, level <= 100 else { return false }
+        return level <= 20
+    }
+
     /// True if this node has a valid-looking position (not 0,0).
     var hasPosition: Bool {
         guard let lat = latitude, let lon = longitude else { return false }

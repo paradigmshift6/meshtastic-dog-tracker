@@ -152,9 +152,13 @@ final class DemoRadioTransport: RadioTransport, @unchecked Sendable {
 
         try? await Task.sleep(for: .milliseconds(200))
 
-        // 8. Send initial positions for all dogs
-        for dog in Self.demoDogs {
+        // 8. Send initial positions and battery telemetry for all dogs
+        emitTelemetry(nodeNum: Self.companionNodeNum, batteryLevel: 78, voltage: 3.95)
+        for (i, dog) in Self.demoDogs.enumerated() {
             emitPosition(nodeNum: dog.nodeNum, lat: dog.baseLat, lon: dog.baseLon, alt: 2250)
+            let battery = UInt32([85, 42, 15][i])  // Maple OK, Bear medium, Scout low
+            let voltage: Float = [3.9, 3.5, 3.2][i]
+            emitTelemetry(nodeNum: dog.nodeNum, batteryLevel: battery, voltage: voltage)
         }
 
         log.info("demo: initial handshake complete, starting position updates")
@@ -236,6 +240,31 @@ final class DemoRadioTransport: RadioTransport, @unchecked Sendable {
         packet.channel = 1     // DogTrk channel
         packet.decoded = data
         packet.rxSnr = Float.random(in: 5...12)
+
+        var fr = FromRadio()
+        fr.packet = packet
+        emitFromRadio(fr)
+    }
+
+    private func emitTelemetry(nodeNum: UInt32, batteryLevel: UInt32, voltage: Float) {
+        var metrics = DeviceMetrics()
+        metrics.batteryLevel = batteryLevel
+        metrics.voltage = voltage
+        metrics.uptimeSeconds = UInt32.random(in: 3600...86400)
+
+        var telemetry = Telemetry()
+        telemetry.time = UInt32(Date().timeIntervalSince1970)
+        telemetry.variant = .deviceMetrics(metrics)
+
+        var data = DataMessage()
+        data.portnum = .telemetryApp
+        data.payload = (try? telemetry.serializedData()) ?? Data()
+
+        var packet = MeshPacket()
+        packet.from = nodeNum
+        packet.to = 0xFFFFFFFF
+        packet.channel = 1
+        packet.decoded = data
 
         var fr = FromRadio()
         fr.packet = packet

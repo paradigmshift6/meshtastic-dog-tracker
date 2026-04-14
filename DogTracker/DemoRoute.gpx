@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="DogTracker">
+  <!-- Simulated user walking near Old Faithful, Yellowstone -->
+  <!-- Use in Xcode: Debug → Simulate Location → DemoRoute -->
+  <wpt lat="44.4600" lon="-110.8280"><name>Start</name></wpt>
+  <wpt lat="44.4602" lon="-110.8278"><name>Step 1</name></wpt>
+  <wpt lat="44.4604" lon="-110.8275"><name>Step 2</name></wpt>
+  <wpt lat="44.4607" lon="-110.8272"><name>Step 3</name></wpt>
+  <wpt lat="44.4609" lon="-110.8270"><name>Step 4</name></wpt>
+  <wpt lat="44.4610" lon="-110.8274"><name>Step 5</name></wpt>
+  <wpt lat="44.4608" lon="-110.8278"><name>Step 6</name></wpt>
+  <wpt lat="44.4605" lon="-110.8282"><name>Step 7</name></wpt>
+  <wpt lat="44.4602" lon="-110.8285"><name>Step 8</name></wpt>
+  <wpt lat="44.4600" lon="-110.8282"><name>Step 9</name></wpt>
+  <wpt lat="44.4600" lon="-110.8280"><name>Loop back</name></wpt>
+</gpx>

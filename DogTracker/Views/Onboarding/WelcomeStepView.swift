@@ -44,6 +44,7 @@ struct WelcomeStepView: View {
                 }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)

@@ -151,6 +151,9 @@ final class MeshService {
         if info.hasPosition {
             applyPosition(info.position, to: &node)
         }
+        if info.hasDeviceMetrics {
+            applyDeviceMetrics(info.deviceMetrics, to: &node)
+        }
         node.snr = info.snr
         if info.lastHeard > 0 {
             node.lastHeard = Date(timeIntervalSince1970: Double(info.lastHeard))
@@ -189,6 +192,8 @@ final class MeshService {
                     node.hwModel = user.hwModel
                     nodes[from] = node
                 }
+            case .telemetryApp:
+                handleTelemetryPacket(from: from, payload: data.payload)
             case .routingApp:
                 handleRoutingPacket(from: from, payload: data.payload, to: packet.to)
             default:
@@ -249,6 +254,33 @@ final class MeshService {
 
         // Persist to SwiftData if this node is a tracked dog
         persistFix(nodeNum: nodeNum, position: position, source: isResponse ? .requested : .scheduled)
+    }
+
+    private func handleTelemetryPacket(from nodeNum: UInt32, payload: Data) {
+        guard let telemetry = try? Telemetry(serializedBytes: payload) else {
+            log.warning("failed to decode Telemetry from \(nodeNum, format: .hex)")
+            return
+        }
+        guard case .deviceMetrics(let metrics) = telemetry.variant else { return }
+
+        var node = nodes[nodeNum] ?? MeshNode(
+            num: nodeNum, longName: "", shortName: "",
+            hexID: String(format: "!%08x", nodeNum),
+            hwModel: .unset, hopsAway: 0
+        )
+        applyDeviceMetrics(metrics, to: &node)
+        nodes[nodeNum] = node
+
+        log.info("telemetry from \(nodeNum, format: .hex): battery=\(metrics.batteryLevel)% voltage=\(metrics.voltage)V")
+    }
+
+    private func applyDeviceMetrics(_ metrics: DeviceMetrics, to node: inout MeshNode) {
+        if metrics.batteryLevel > 0 {
+            node.batteryLevel = metrics.batteryLevel
+        }
+        if metrics.voltage > 0 {
+            node.voltage = metrics.voltage
+        }
     }
 
     private func applyPosition(_ pos: Position, to node: inout MeshNode) {

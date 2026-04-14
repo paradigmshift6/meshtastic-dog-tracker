@@ -81,6 +81,9 @@ struct SettingsScreen: View {
             LabeledContent("Nodes seen", value: "\(mesh.nodes.count)")
             if mesh.myNodeNum > 0 {
                 LabeledContent("My node", value: String(format: "!%08x", mesh.myNodeNum))
+                if let companion = mesh.nodes[mesh.myNodeNum], let level = companion.batteryLevel {
+                    LabeledContent("Companion battery", value: level > 100 ? "Plugged in" : "\(level)%")
+                }
             }
         }
     }

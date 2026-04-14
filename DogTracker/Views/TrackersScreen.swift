@@ -147,7 +147,14 @@ private struct AssignedRow: View {
             trackerPhoto
             VStack(alignment: .leading) {
                 Text(tracker.name).font(.headline)
-                Text(lastFixText).font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(lastFixText)
+                    if let node = mesh.nodes[tracker.nodeNum], let level = node.batteryLevel {
+                        BatteryBadge(level: level)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
     }
@@ -196,6 +203,9 @@ private struct MeshNodeRow: View {
                     }
                     if let snr = node.snr {
                         Text("\(snr, specifier: "%.1f") dB")
+                    }
+                    if let level = node.batteryLevel {
+                        BatteryBadge(level: level)
                     }
                 }
                 .font(.caption.monospaced())
@@ -397,6 +407,40 @@ private struct PhotoCropView: View {
             image.draw(in: CGRect(x: x, y: y, width: drawW * scaleFactor, height: drawH * scaleFactor))
         }
         onCrop(cropped)
+    }
+}
+
+// MARK: - Battery badge
+
+/// Compact battery indicator with icon and percentage.
+private struct BatteryBadge: View {
+    let level: UInt32
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: iconName)
+                .foregroundStyle(color)
+            Text(label)
+        }
+    }
+
+    private var iconName: String {
+        if level > 100 { return "bolt.fill" }          // externally powered
+        if level > 75  { return "battery.100" }
+        if level > 50  { return "battery.75" }
+        if level > 25  { return "battery.50" }
+        return "battery.25"
+    }
+
+    private var color: Color {
+        if level > 100 { return .green }
+        if level > 20  { return .primary }
+        if level > 10  { return .orange }
+        return .red
+    }
+
+    private var label: String {
+        level > 100 ? "Plugged in" : "\(level)%"
     }
 }
 
