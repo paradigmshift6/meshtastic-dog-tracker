@@ -9,17 +9,28 @@ struct DogTrackerApp: App {
     @State private var location = LocationProvider()
     @State private var units = UnitSettings()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
+    @AppStorage("demoMode") private var demoMode = false
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // Check for demo mode: either the UserDefaults flag or a launch argument
+        let isDemo = UserDefaults.standard.bool(forKey: "demoMode")
+            || ProcessInfo.processInfo.arguments.contains("DEMO_MODE")
+
         do {
             let mc = try ModelContainer(
                 for: Tracker.self, Fix.self, TileRegion.self
             )
             self.modelContainer = mc
-            let r = RadioController()
+
+            let transport: RadioTransport = isDemo ? DemoRadioTransport() : BLERadioTransport()
+            let r = RadioController(transport: transport)
             self._radio = State(initialValue: r)
             self._mesh = State(initialValue: MeshService(radio: r, modelContainer: mc))
+
+            if isDemo {
+                DemoSeeder.seedIfNeeded(modelContainer: mc)
+            }
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }
@@ -27,13 +38,18 @@ struct DogTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if onboardingComplete {
+            if demoMode || onboardingComplete {
                 ContentView()
                     .onAppear {
                         radio.start()
                         mesh.start()
-                        location.requestPermission()
-                        radio.autoReconnect()
+                        if demoMode {
+                            // In demo mode, auto-connect to the fake radio
+                            startDemoConnection()
+                        } else {
+                            location.requestPermission()
+                            radio.autoReconnect()
+                        }
                     }
             } else {
                 OnboardingRootView(radio: radio, mesh: mesh, modelContainer: modelContainer)
@@ -45,9 +61,19 @@ struct DogTrackerApp: App {
         .environment(location)
         .environment(units)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
+            if phase == .active && !demoMode {
                 radio.handleReturnToForeground()
             }
+        }
+    }
+
+    /// Kick off the demo transport's simulated connection.
+    private func startDemoConnection() {
+        let demoUUID = UUID(uuidString: "00000000-DE00-DE00-DE00-000000000000")!
+        Task {
+            await radio.radio.start()
+            try? await Task.sleep(for: .milliseconds(200))
+            await radio.radio.connectByUUID(demoUUID)
         }
     }
 }

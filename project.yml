@@ -34,7 +34,7 @@ targets:
       path: DogTracker/Info.plist
       properties:
         CFBundleDisplayName: Dog Tracker
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
         UIRequiresFullScreen: false

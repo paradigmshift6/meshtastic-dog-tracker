@@ -23,6 +23,7 @@ struct SettingsScreen: View {
                 factoryResetSection
                 meshSection
                 historySection
+                demoSection
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -111,9 +112,32 @@ struct SettingsScreen: View {
         }
     }
 
+    private var demoSection: some View {
+        Section {
+            Toggle("Demo Mode", isOn: Binding(
+                get: { UserDefaults.standard.bool(forKey: "demoMode") },
+                set: { newValue in
+                    UserDefaults.standard.set(newValue, forKey: "demoMode")
+                    demoRestartNeeded = true
+                }
+            ))
+            if demoRestartNeeded {
+                Text("Restart the app to apply demo mode changes.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Demo")
+        } footer: {
+            Text("Simulates 3 dogs with moving positions. No Meshtastic hardware needed. Useful for testing or App Store review.")
+        }
+    }
+
+    @State private var demoRestartNeeded = false
+
     private var aboutSection: some View {
         Section("About") {
-            LabeledContent("Version", value: "0.1.0")
+            LabeledContent("Version", value: "1.0.0")
             LabeledContent("Map data", value: "USGS US Topo (public domain)")
             LabeledContent("Meshtastic protos", value: "v2.7.21")
             LabeledContent("License", value: "GPL-3.0")
