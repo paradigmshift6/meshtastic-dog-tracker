@@ -113,6 +113,26 @@ final class OnboardingManager {
         }
     }
 
+    /// Entry point used by "Set Up New Tracker" from Settings. Skips the
+    /// companion setup flow entirely and jumps straight to scanning for a
+    /// tracker. Restores the companion UUID afterwards (via finishOnboarding).
+    func beginTrackerSetup() {
+        // Remember the companion UUID so finishOnboarding can reconnect to it.
+        if companionPeripheralUUID == nil, let saved = savedCompanionUUID {
+            companionPeripheralUUID = saved
+        } else if companionPeripheralUUID == nil,
+                  let s = UserDefaults.standard.string(forKey: "lastConnectedPeripheralUUID"),
+                  let uuid = UUID(uuidString: s) {
+            companionPeripheralUUID = uuid
+        }
+        step = .connectTracker
+        radio.disconnectForSwitch()
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            radio.startScan()
+        }
+    }
+
     /// User is done adding trackers.
     func finishOnboarding() {
         step = .complete

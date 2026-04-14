@@ -293,8 +293,9 @@ struct TrackerSetupSheet: View {
         .onAppear {
             if manager == nil {
                 let m = OnboardingManager(radio: radio, modelContainer: modelContainer)
-                // Jump straight to tracker setup
                 m.startObserving()
+                // Skip welcome/companion flow — we already have a companion.
+                m.beginTrackerSetup()
                 manager = m
             }
         }
@@ -312,14 +313,6 @@ struct TrackerSetupSheet: View {
                 subtitle: "Power on the tracker and select it below.",
                 systemImage: "pawprint.fill"
             )
-            .onAppear {
-                // Disconnect from companion to connect to tracker
-                radio.disconnect()
-                Task {
-                    try? await Task.sleep(for: .seconds(1))
-                    radio.startScan()
-                }
-            }
 
         case .nameTracker:
             NameDeviceView(
@@ -345,10 +338,9 @@ struct TrackerSetupSheet: View {
                 systemImage: "checkmark.circle.fill",
                 buttonLabel: "Done",
                 action: {
-                    // Reconnect to companion
-                    if let uuid = UUID(uuidString: UserDefaults.standard.string(forKey: "lastConnectedPeripheralUUID") ?? "") {
-                        radio.connect(uuid)
-                    }
+                    // Restore companion UUID (was overwritten by tracker connect)
+                    // and reconnect to it.
+                    manager.finishOnboarding()
                     dismiss()
                 }
             )

@@ -304,7 +304,9 @@ final class MeshService {
         let lon = Double(position.longitudeI) * 1e-7
         guard !(lat == 0 && lon == 0) else { return }
 
-        let context = ModelContext(modelContainer)
+        // Use the container's main context so SwiftUI @Query bindings
+        // observe the inserted Fix and trails redraw immediately.
+        let context = modelContainer.mainContext
         let descriptor = FetchDescriptor<Tracker>(
             predicate: #Predicate { $0.nodeNum == nodeNum }
         )

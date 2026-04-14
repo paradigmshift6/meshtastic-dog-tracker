@@ -19,6 +19,11 @@ final class RadioController {
     private(set) var lastFromRadio: FromRadio?
     private(set) var configComplete: Bool = false
 
+    /// Timestamp of the most recent `.connecting`/`.configuring` transition.
+    /// Used by `handleReturnToForeground` to decide whether an in-progress
+    /// connect has been stuck long enough to warrant interruption.
+    private var connectingSince: Date?
+
     /// Underlying radio actor. Exposed so feature code (Ping, etc.) can call
     /// `sendToRadio`.
     let radio: MeshtasticRadio
@@ -99,9 +104,15 @@ final class RadioController {
             reconnectTask?.cancel()
             autoReconnect()
         case .connecting, .configuring, .scanning:
-            // Already mid-connect. If it's been stuck for a while (timer froze
-            // in background), cancel and retry.
-            print("[Radio] returned to foreground in state \(connectionState), restarting connect")
+            // Already mid-connect. Only interrupt if the state has been
+            // stuck for more than 20s — otherwise we'd kill a handshake
+            // that's actively progressing and cause a reconnect loop.
+            let stuckFor = connectingSince.map { -$0.timeIntervalSinceNow } ?? 0
+            guard stuckFor > 20 else {
+                print("[Radio] foreground in \(connectionState), \(Int(stuckFor))s in — letting it finish")
+                return
+            }
+            print("[Radio] foreground in \(connectionState), stuck \(Int(stuckFor))s — restarting connect")
             reconnectTask?.cancel()
             reconnectAttempts = 0
             Task {
@@ -149,6 +160,20 @@ final class RadioController {
         case .stateChanged(let s):
             let prev = connectionState
             connectionState = s
+
+            // Track when we entered a connect-in-progress state so
+            // handleReturnToForeground can tell a fresh handshake from a
+            // stuck one.
+            switch s {
+            case .connecting, .scanning:
+                if connectingSince == nil { connectingSince = Date() }
+            case .configuring:
+                // configuring is the longer phase — reset the timer so we
+                // give it a fresh 20s window before considering it stuck.
+                connectingSince = Date()
+            case .connected, .disconnected, .failed, .bluetoothUnavailable:
+                connectingSince = nil
+            }
 
             if case .connected = s {
                 reconnectTask?.cancel()
