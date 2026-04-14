@@ -1,5 +1,5 @@
 import SwiftUI
-import MapLibre
+@preconcurrency import MapLibre
 
 /// Posted before an mbtiles file is deleted so the map can release its SQLite handle.
 extension Notification.Name {
@@ -42,7 +42,7 @@ struct DogMapView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    class Coordinator: NSObject, MLNMapViewDelegate {
+    @MainActor class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         private var currentAnnotations: [String: MLNPointAnnotation] = [:]
         private var markerColors: [String: String] = [:]
         private var markerPhotos: [String: UIImage] = [:]
@@ -237,9 +237,11 @@ struct DogMapView: UIViewRepresentable {
             NotificationCenter.default.addObserver(
                 forName: .didDeleteTileRegion, object: nil, queue: .main
             ) { [weak self] _ in
-                guard let self, !self.tileSourceAdded else { return }
-                self.tileSourceAdded = true
-                self.addTileSource(to: style)
+                MainActor.assumeIsolated {
+                    guard let self, !self.tileSourceAdded else { return }
+                    self.tileSourceAdded = true
+                    self.addTileSource(to: style)
+                }
             }
         }
 

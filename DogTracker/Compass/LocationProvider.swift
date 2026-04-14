@@ -47,7 +47,10 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        Task { @MainActor in self.heading = newHeading }
+        // CLHeading is not Sendable; use nonisolated(unsafe) to cross isolation
+        // boundary. Safe because CLLocationManager delivers on the main thread.
+        nonisolated(unsafe) let h = newHeading
+        Task { @MainActor in self.heading = h }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {

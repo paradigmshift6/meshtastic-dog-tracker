@@ -7,7 +7,7 @@ import OSLog
 /// MBTiles spec: https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md
 /// Used by the tile downloader (phase 9) and read by MapLibre at runtime
 /// via file:// URL with mbtiles source type.
-final class MBTilesWriter {
+final class MBTilesWriter: @unchecked Sendable {
     private let log = Logger(subsystem: "com.levijohnson.DogTracker", category: "MBTiles")
     private var db: OpaquePointer?
     private var insertStmt: OpaquePointer?
@@ -43,7 +43,7 @@ final class MBTilesWriter {
         sqlite3_bind_int(stmt, 1, Int32(zoom))
         sqlite3_bind_int(stmt, 2, Int32(column))
         sqlite3_bind_int(stmt, 3, Int32(row))
-        data.withUnsafeBytes { buf in
+        _ = data.withUnsafeBytes { buf in
             sqlite3_bind_blob(stmt, 4, buf.baseAddress, Int32(data.count), nil)
         }
         guard sqlite3_step(stmt) == SQLITE_DONE else {

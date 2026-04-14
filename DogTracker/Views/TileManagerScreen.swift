@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import MapLibre
+@preconcurrency import MapLibre
 import CoreLocation
 
 struct TileManagerScreen: View {
@@ -302,7 +302,7 @@ private struct RegionPickerMap: UIViewRepresentable {
         Coordinator(onBoundsChanged: onBoundsChanged)
     }
 
-    class Coordinator: NSObject, MLNMapViewDelegate {
+    @MainActor class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         let onBoundsChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)) -> Void
         private var tileSourceAdded = false
         private var hasInitialCenter = false

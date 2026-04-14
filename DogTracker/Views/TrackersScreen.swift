@@ -462,6 +462,7 @@ private struct ImagePicker: UIViewControllerRepresentable {
             let provider = result.itemProvider
             log.info("loading image from provider, canLoadUIImage=\(provider.canLoadObject(ofClass: UIImage.self))")
 
+            nonisolated(unsafe) let onPick = parent.onPick
             provider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
                 if let error {
                     self?.log.error("image load error: \(error.localizedDescription)")
@@ -472,7 +473,7 @@ private struct ImagePicker: UIViewControllerRepresentable {
                 }
                 self?.log.info("image loaded: \(Int(image.size.width))x\(Int(image.size.height))")
                 DispatchQueue.main.async {
-                    self?.parent.onPick(image)
+                    onPick(image)
                 }
             }
         }
