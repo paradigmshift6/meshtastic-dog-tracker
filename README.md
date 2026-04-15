@@ -1,8 +1,10 @@
-# Dog Tracker
+# PawMesh
 
-iOS app for tracking off-leash dogs in remote (no-cell) areas using Meshtastic LoRa trackers running stock firmware. Connects to a companion Meshtastic node (Heltec V3) via BLE and displays dog positions on a USGS topographic map — fully offline.
+iOS app for tracking off-leash dogs in remote (no-cell) areas over LoRa mesh radio. Connects to a companion mesh node (Heltec V3) running Meshtastic® firmware via BLE and displays dog positions on a USGS topographic map — fully offline.
 
-**License:** GPL-3.0 (due to Meshtastic protobuf dependency).
+**License:** GPL-3.0 (due to vendored Meshtastic® protobuf dependency).
+
+> PawMesh is an independent project. **Meshtastic®** is a registered trademark of **Meshtastic LLC**. PawMesh is not affiliated with, endorsed by, or sponsored by Meshtastic LLC.
 
 ## Features
 
@@ -12,7 +14,7 @@ iOS app for tracking off-leash dogs in remote (no-cell) areas using Meshtastic L
 - **Offline maps** — download USGS topo regions as MBTiles before heading out
 - **Up to 3 dogs** with photo, name, and color
 - **Background BLE** — keeps receiving positions with the screen off
-- Supports stock Meshtastic firmware (no custom firmware needed)
+- Works with stock Meshtastic® firmware (no custom firmware needed)
 
 ## Hardware setup
 
@@ -20,8 +22,8 @@ iOS app for tracking off-leash dogs in remote (no-cell) areas using Meshtastic L
 [Dog tracker]  ──LoRa mesh──►  [Heltec V3 with you]  ──BLE──►  [iPhone app]
 ```
 
-- Dog tracker: any Meshtastic node with position module enabled, `broadcast_secs = 120`
-- Companion: Heltec V3 (or any BLE-capable Meshtastic node) paired to your iPhone
+- Dog tracker: any mesh node running Meshtastic® firmware with position module enabled, `broadcast_secs = 120`
+- Companion: Heltec V3 (or any BLE-capable node running Meshtastic® firmware) paired to your iPhone
 
 ## First-time setup
 

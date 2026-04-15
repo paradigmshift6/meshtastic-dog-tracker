@@ -64,7 +64,7 @@ struct OnboardingContainerView: View {
                 ConnectDeviceStepView(
                     manager: manager,
                     radio: radio,
-                    title: "Connect Dog Tracker",
+                    title: "Connect Tracker",
                     subtitle: "Power on the tracker and select it below.\nYou'll need to connect each tracker individually.",
                     systemImage: "pawprint.fill"
                 )

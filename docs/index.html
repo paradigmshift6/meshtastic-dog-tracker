@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dog Tracker — Meshtastic GPS Tracker for Dogs</title>
+  <title>PawMesh — Backcountry GPS Tracker for Dogs</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; line-height: 1.6; }
@@ -28,8 +28,8 @@
 </head>
 <body>
   <div class="hero">
-    <h1>Dog Tracker</h1>
-    <p>Track your off-leash dogs in the backcountry using Meshtastic LoRa radios. No cell service needed.</p>
+    <h1>PawMesh</h1>
+    <p>Track your off-leash dogs in the backcountry over LoRa mesh radio. No cell service needed.</p>
   </div>
 
   <div class="container">
@@ -48,29 +48,31 @@
       </div>
       <div class="feature">
         <h3>Fully Offline</h3>
-        <p>No internet required in the field. BLE to your Meshtastic radio, LoRa to your dogs.</p>
+        <p>No internet required in the field. Bluetooth to your mesh radio, LoRa to your dogs.</p>
       </div>
     </div>
 
     <h2>How It Works</h2>
-    <p>Attach a small Meshtastic GPS tracker to your dog's collar. Carry a companion Meshtastic node (like a Heltec V3) paired to your iPhone via Bluetooth. The trackers broadcast GPS positions over LoRa mesh every 2 minutes, and Dog Tracker shows them on a topographic map.</p>
+    <p>Attach a small GPS tracker node to your dog's collar. Carry a companion mesh node (like a Heltec V3) paired to your iPhone via Bluetooth. The trackers broadcast GPS positions over LoRa mesh every 2 minutes, and PawMesh shows them on a topographic map.</p>
 
     <h2>Requirements</h2>
     <ul>
       <li>iPhone running iOS 17 or later</li>
-      <li>A Meshtastic radio node to pair with your phone (e.g., Heltec V3)</li>
-      <li>Meshtastic GPS tracker(s) on your dogs running stock firmware with position module enabled</li>
+      <li>A LoRa mesh radio node running Meshtastic® firmware to pair with your phone (e.g., Heltec V3)</li>
+      <li>GPS tracker node(s) on your dogs running Meshtastic® firmware with the position module enabled</li>
     </ul>
 
+    <p style="font-size: 0.85rem; color: #777; margin-top: 16px;">PawMesh works with devices running the open-source Meshtastic® firmware. Meshtastic® is a registered trademark of Meshtastic LLC. PawMesh is an independent project and is not affiliated with, endorsed by, or sponsored by Meshtastic LLC.</p>
+
     <div class="links">
-      <a href="https://github.com/paradigmshift6/meshtastic-dog-tracker">Source Code</a>
+      <a href="https://github.com/paradigmshift6/pawmesh-ios">Source Code</a>
       <a href="privacy-policy.html" class="secondary">Privacy Policy</a>
       <a href="support.html" class="secondary">Support</a>
     </div>
   </div>
 
   <footer>
-    <p>Dog Tracker is open source under <a href="https://github.com/paradigmshift6/meshtastic-dog-tracker/blob/main/LICENSE">GPL-3.0</a>.</p>
+    <p>PawMesh is open source under <a href="https://github.com/paradigmshift6/pawmesh-ios/blob/main/LICENSE">GPL-3.0</a>.</p>
   </footer>
 </body>
 </html>

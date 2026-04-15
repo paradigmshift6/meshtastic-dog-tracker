@@ -1,4 +1,4 @@
-# Meshtastic Dog Tracker — Design Doc
+# PawMesh — Design Doc
 
 **Status:** Draft v1
 **Target:** iOS 17+, native Swift/SwiftUI, App Store distribution

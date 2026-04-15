@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Dog Tracker</string>
+	<string>PawMesh</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -17,13 +17,13 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Dog Tracker connects to your Meshtastic radio over Bluetooth to receive GPS positions from your dog trackers.</string>
+	<string>PawMesh connects to your LoRa mesh radio over Bluetooth to receive GPS positions from your dog trackers.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Continued location access lets Dog Tracker keep logging your dogs' positions while the screen is off.</string>
+	<string>Continued location access lets PawMesh keep logging your dogs' positions while the screen is off.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is shown on the map and used to compute the bearing and distance from you to each dog.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

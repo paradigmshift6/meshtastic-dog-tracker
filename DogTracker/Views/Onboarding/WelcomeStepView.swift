@@ -12,9 +12,9 @@ struct WelcomeStepView: View {
                 .foregroundStyle(.tint)
 
             VStack(spacing: 12) {
-                Text("Dog Tracker")
+                Text("PawMesh")
                     .font(.largeTitle.bold())
-                Text("Track your dogs in the backcountry\nusing Meshtastic radios.")
+                Text("Track your dogs in the backcountry\nover LoRa mesh radio.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

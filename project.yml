@@ -33,9 +33,9 @@ targets:
     info:
       path: DogTracker/Info.plist
       properties:
-        CFBundleDisplayName: Dog Tracker
-        CFBundleShortVersionString: "1.0.0"
-        CFBundleVersion: "1"
+        CFBundleDisplayName: PawMesh
+        CFBundleShortVersionString: "1.0.1"
+        CFBundleVersion: "2"
         UILaunchScreen: {}
         UIRequiresFullScreen: false
         UISupportedInterfaceOrientations:
@@ -43,13 +43,13 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSBluetoothAlwaysUsageDescription: >-
-          Dog Tracker connects to your Meshtastic radio over Bluetooth
+          PawMesh connects to your LoRa mesh radio over Bluetooth
           to receive GPS positions from your dog trackers.
         NSLocationWhenInUseUsageDescription: >-
           Your location is shown on the map and used to compute
           the bearing and distance from you to each dog.
         NSLocationAlwaysAndWhenInUseUsageDescription: >-
-          Continued location access lets Dog Tracker keep logging
+          Continued location access lets PawMesh keep logging
           your dogs' positions while the screen is off.
         NSPhotoLibraryUsageDescription: >-
           Pick a photo of each dog to show on the map marker.

@@ -61,7 +61,7 @@ struct SettingsScreen: View {
             NavigationLink {
                 RadioScreen()
             } label: {
-                LabeledContent("Meshtastic radio", value: shortStatus)
+                LabeledContent("Mesh radio", value: shortStatus)
             }
         }
     }
@@ -132,18 +132,23 @@ struct SettingsScreen: View {
         } header: {
             Text("Demo")
         } footer: {
-            Text("Simulates 3 dogs with moving positions. No Meshtastic hardware needed. Useful for testing or App Store review.")
+            Text("Simulates 3 dogs with moving positions. No physical hardware needed. Useful for testing or App Store review.")
         }
     }
 
     @State private var demoRestartNeeded = false
 
     private var aboutSection: some View {
-        Section("About") {
-            LabeledContent("Version", value: "1.0.0")
+        Section {
+            LabeledContent("Version", value: "1.0.1")
             LabeledContent("Map data", value: "USGS US Topo (public domain)")
-            LabeledContent("Meshtastic protos", value: "v2.7.21")
+            LabeledContent("Protocol", value: "Meshtastic® v2.7.21")
             LabeledContent("License", value: "GPL-3.0")
+        } header: {
+            Text("About")
+        } footer: {
+            Text("PawMesh works with LoRa mesh radios running the open-source Meshtastic® firmware. Meshtastic® is a registered trademark of Meshtastic LLC. PawMesh is an independent project and is not affiliated with, endorsed by, or sponsored by Meshtastic LLC.")
+                .font(.caption2)
         }
     }
 
