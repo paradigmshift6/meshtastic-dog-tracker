@@ -1,13 +1,8 @@
 import Foundation
 import SwiftData
 
-/// How a Fix was obtained.
-enum FixSource: String, Codable {
-    /// Tracker's normal scheduled position broadcast.
-    case scheduled
-    /// Reply to a user-initiated Ping (POSITION_APP request with want_response).
-    case requested
-}
+// FixSource lives in Shared/FixSource.swift so the watchOS target can use it
+// without linking SwiftData.
 
 /// One GPS position report from a tracker.
 @Model

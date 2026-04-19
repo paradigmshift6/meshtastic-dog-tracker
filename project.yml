@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.levijohnson
   deploymentTarget:
     iOS: "17.0"
+    watchOS: "10.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
   developmentLanguage: en
@@ -10,6 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    WATCHOS_DEPLOYMENT_TARGET: "10.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_STRICT_CONCURRENCY: complete
 packages:
@@ -26,10 +28,13 @@ targets:
     platform: iOS
     sources:
       - path: DogTracker
+      - path: Shared
     dependencies:
       - package: SwiftProtobuf
       - package: MapLibre
         product: MapLibre
+      - target: DogTrackerWatch
+        embed: true
     info:
       path: DogTracker/Info.plist
       properties:
@@ -63,6 +68,32 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: LV3P9K7AFP
+  DogTrackerWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: DogTrackerWatch
+      - path: Shared
+    info:
+      path: DogTrackerWatch/Info.plist
+      properties:
+        CFBundleDisplayName: PawMesh
+        CFBundleShortVersionString: "1.0.1"
+        CFBundleVersion: "2"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.levijohnson.DogTracker
+        WKWatchOnly: false
+        WKRunsIndependentlyOfCompanionApp: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTracker.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        SUPPORTED_PLATFORMS: "watchsimulator watchos"
+        SDKROOT: watchos
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: LV3P9K7AFP
   DogTrackerTests:
     type: bundle.unit-test
     platform: iOS
@@ -79,6 +110,7 @@ schemes:
     build:
       targets:
         DogTracker: all
+        DogTrackerWatch: all
         DogTrackerTests: [test]
     run:
       config: Debug
@@ -86,6 +118,18 @@ schemes:
       config: Debug
       targets:
         - DogTrackerTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  DogTrackerWatch:
+    build:
+      targets:
+        DogTrackerWatch: all
+    run:
+      config: Debug
     profile:
       config: Release
     analyze:

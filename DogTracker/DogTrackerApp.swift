@@ -8,6 +8,7 @@ struct DogTrackerApp: App {
     @State private var mesh: MeshService
     @State private var location = LocationProvider()
     @State private var units = UnitSettings()
+    @State private var phoneWatch: PhoneWatchSession
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @AppStorage("demoMode") private var demoMode = false
     @Environment(\.scenePhase) private var scenePhase
@@ -25,8 +26,16 @@ struct DogTrackerApp: App {
 
             let transport: RadioTransport = isDemo ? DemoRadioTransport() : BLERadioTransport()
             let r = RadioController(transport: transport)
+            let m = MeshService(radio: r, modelContainer: mc)
+            let loc = LocationProvider()
+            let u = UnitSettings()
             self._radio = State(initialValue: r)
-            self._mesh = State(initialValue: MeshService(radio: r, modelContainer: mc))
+            self._mesh = State(initialValue: m)
+            self._location = State(initialValue: loc)
+            self._units = State(initialValue: u)
+            self._phoneWatch = State(initialValue: PhoneWatchSession(
+                mesh: m, radio: r, location: loc, units: u, modelContainer: mc
+            ))
 
             if isDemo {
                 DemoSeeder.seedIfNeeded(modelContainer: mc)
@@ -43,6 +52,7 @@ struct DogTrackerApp: App {
                     .onAppear {
                         radio.start()
                         mesh.start()
+                        phoneWatch.start()
                         if demoMode {
                             // In demo mode, auto-connect to the fake radio
                             startDemoConnection()

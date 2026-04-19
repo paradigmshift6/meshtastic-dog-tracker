@@ -114,26 +114,10 @@ struct CompassScreen: View {
     // MARK: - Fix age
 
     private func fixAgeLabel(node: MeshNode) -> some View {
-        let age = node.positionTime.map { -$0.timeIntervalSinceNow } ?? .infinity
-        let text: String
-        let color: Color
-        if age <= 180 {         // green ≤ 3 min
-            text = "Fix \(Int(age))s ago"
-            color = .green
-        } else if age <= 600 {  // yellow ≤ 10 min
-            text = "Fix \(Int(age / 60))m ago"
-            color = .yellow
-        } else if age < .infinity {
-            text = "Fix \(Int(age / 60))m ago"
-            color = .red
-        } else {
-            text = "No fix"
-            color = .red
-        }
-
+        let described = FixAge.describe(node.positionTime)
         return HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 10, height: 10)
-            Text(text).font(.subheadline).foregroundStyle(.secondary)
+            Circle().fill(described.tier.color).frame(width: 10, height: 10)
+            Text(described.text).font(.subheadline).foregroundStyle(.secondary)
         }
     }
 
