@@ -121,7 +121,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTracker.watchkitapp.complication
+        PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTracker.watchkitapp.widget
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
         SUPPORTED_PLATFORMS: "watchsimulator watchos"
