@@ -239,13 +239,16 @@ struct DogMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
-            // Returning a view for an MLNShape (polylines, polygons) makes
-            // MapLibre treat the shape as a single-point view annotation
-            // pinned to its first coordinate, which silently suppresses
-            // the line/fill rendering. Bail out for shapes — they go
-            // through the strokeColor/lineWidth delegate path instead.
+            // Returning a view for a multi-point shape (polylines, polygons)
+            // makes MapLibre treat the shape as a single-point view
+            // annotation pinned to its first coordinate, which silently
+            // suppresses the line/fill rendering. Bail out for those —
+            // they go through the strokeColor / lineWidth delegate path
+            // instead. NOTE: do NOT filter on MLNShape here, because
+            // MLNPointAnnotation is also a subclass of MLNShape — that
+            // would suppress the dog markers themselves.
             guard !(annotation is MLNUserLocation),
-                  !(annotation is MLNShape) else { return nil }
+                  !(annotation is MLNMultiPoint) else { return nil }
 
             let size: CGFloat = 40
             let view = MLNAnnotationView(reuseIdentifier: nil) // no reuse, photos differ
@@ -289,8 +292,9 @@ struct DogMapView: UIViewRepresentable {
         func mapView(_ mapView: MLNMapView, annotationCanShowCallout annotation: MLNAnnotation) -> Bool {
             // Only point annotations should show callouts. Polylines /
             // polygons get tapped along their geometry which would yield
-            // a confusing callout location.
-            !(annotation is MLNShape)
+            // a confusing callout location. Use MLNMultiPoint here, not
+            // MLNShape — MLNPointAnnotation is also a MLNShape.
+            !(annotation is MLNMultiPoint)
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
