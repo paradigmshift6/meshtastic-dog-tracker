@@ -184,12 +184,26 @@ final class RadioController {
                 reconnectAttempts = 0
                 lastFailWasEncryption = false
             } else if case .disconnected = s {
-                // Detect encryption failures — the disconnect reason contains
-                // "encrypt" when CoreBluetooth can't establish the encrypted link.
-                // These need a scan-based reconnect (stale peripheral reference).
+                // Why iOS fails the first direct reconnect almost every time:
+                // after a mid-session drop CoreBluetooth's cached CBPeripheral
+                // reference often goes stale — the next connect attempt fails
+                // with an encryption error. Detect those cases up front so we
+                // skip the wasted 3s direct attempt and go straight to scan,
+                // which yields a fresh peripheral.
                 if case .connecting = prev {
-                    // Failed during connect phase = likely encryption issue
+                    // Failed during initial connect phase = encryption issue.
                     lastFailWasEncryption = true
+                } else if case .connected = prev {
+                    // Mid-session drop — the peripheral reference on this
+                    // side is now stale. Scan-based recovery is reliable;
+                    // direct UUID is almost always going to fail encryption.
+                    lastFailWasEncryption = true
+                    print("[Radio] mid-session drop — skipping direct UUID, using scan")
+                } else if case .configuring = prev {
+                    // Same reasoning — if the link dropped during the
+                    // handshake drain, the peripheral is stale too.
+                    lastFailWasEncryption = true
+                    print("[Radio] drop during configuring — skipping direct UUID, using scan")
                 }
                 configComplete = false
                 if !userDisconnected && !suppressAutoReconnect {

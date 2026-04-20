@@ -14,33 +14,43 @@ struct WatchCompassPage: View {
     @Environment(\.isLuminanceReduced) private var isDimmed
     let tracker: TrackerSnapshot
 
-    /// Drives a 1Hz re-render so the fix-age label and color tier update
-    /// even when no new snapshot has arrived from the phone.
-    @State private var now = Date()
-    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    // 1Hz re-render is now driven by TimelineView in `body` — no @State
+    // timer needed. See body comments.
 
     var body: some View {
-        VStack(spacing: 6) {
-            header
-            Spacer(minLength: 0)
-            arrow
-            distance
-            fixAgeRow
-            calibrationWarning
-            Spacer(minLength: 0)
-            pingButton
+        // TimelineView re-evaluates the inner closure on a 1Hz schedule,
+        // which keeps the fix-age label and color tier ticking live even
+        // when the parent view doesn't re-render. This replaces our older
+        // Timer.publish + @State approach which was unreliable on watchOS
+        // (Timer pauses during view transitions and can stop entirely
+        // after a navigation push).
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let now = context.date
+            VStack(spacing: 6) {
+                header
+                Spacer(minLength: 0)
+                arrow
+                distance
+                fixAgeRow(now: now)
+                calibrationWarning
+                Spacer(minLength: 0)
+                pingButton
+            }
+            .padding(.horizontal, 8)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(voiceOverSummary(now: now))
         }
-        .padding(.horizontal, 8)
-        .onReceive(tick) { now = $0 }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(voiceOverSummary)
+        // Show the dog name in the system navigation title so it doesn't
+        // get covered by the back chevron in the top-left.
+        .navigationTitle(tracker.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     /// VoiceOver reads the whole page as one phrase: "Maple, 20.5 miles,
     /// bearing 47 degrees from north, fix 12 seconds ago." The per-element
     /// visuals still render; we just give the screen reader a sensible
     /// narrative.
-    private var voiceOverSummary: String {
+    private func voiceOverSummary(now: Date) -> String {
         var parts: [String] = [tracker.name]
         if let meters = distanceMeters {
             parts.append(BearingMath.distanceString(meters, useMetric: session.snapshot.useMetric))
@@ -77,11 +87,12 @@ struct WatchCompassPage: View {
     // MARK: - Header
 
     private var header: some View {
+        // Dog's name lives in the navigationTitle so it doesn't get
+        // covered by the back chevron. Here we keep just the photo
+        // badge and the phone-radio link indicator — still useful at
+        // a glance, no text that could clip.
         HStack(spacing: 6) {
             trackerBadge
-            Text(tracker.name)
-                .font(.headline)
-                .lineLimit(1)
             Spacer(minLength: 0)
             linkBadge
         }
@@ -184,7 +195,7 @@ struct WatchCompassPage: View {
 
     // MARK: - Fix age row
 
-    private var fixAgeRow: some View {
+    private func fixAgeRow(now: Date) -> some View {
         let described = FixAge.describe(tracker.lastFix?.fixTime, now: now)
         return HStack(spacing: 4) {
             Circle().fill(described.tier.color).frame(width: 6, height: 6)
