@@ -34,8 +34,7 @@ struct ComplicationProvider: TimelineProvider {
             date: date,
             snapshot: fleet,
             closest: pick?.tracker,
-            closestMeters: pick?.meters,
-            closestBearing: pick?.bearing
+            closestMeters: pick?.meters
         )
     }
 }
