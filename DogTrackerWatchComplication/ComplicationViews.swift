@@ -6,14 +6,16 @@ import WidgetKit
 ///   - accessoryRectangular (Infograph Modular, Siri watch face)
 ///   - accessoryInline (smart stack single-line text)
 ///
-/// Each family shows a directional arrow plus distance to the closest
-/// dog. The arrow uses the phone's last-known heading from the snapshot;
-/// it'll be slightly stale if the user has rotated since the last
-/// applicationContext push, but tapping the complication opens the live
-/// compass in the watch app.
+/// Each family shows distance to the closest dog plus a directional
+/// indicator. The arrow is anchored to true north (with a small "N"
+/// marker so the user knows it isn't tracking their orientation) — the
+/// user mentally translates "the dog is northeast." This is reliable
+/// because complications don't have access to live heading data; an
+/// orientation-relative arrow would silently lie whenever the user
+/// rotated.
 ///
-/// Every family tap deep-links into the main watch app via the
-/// `pawmesh://dog/<nodeNum>` URL scheme.
+/// Tapping any family deep-links to the watch app's live compass page
+/// for that dog via `pawmesh://dog/<nodeNum>`.
 struct ComplicationView: View {
     @Environment(\.widgetFamily) private var family
     let entry: ComplicationEntry
@@ -35,18 +37,16 @@ struct ComplicationView: View {
                 let tier = FixAge.describe(closest.lastFix?.fixTime, now: entry.date).tier
                 ZStack {
                     AccessoryWidgetBackground()
-                    VStack(spacing: 0) {
-                        // Arrow takes the upper half. Falls back to a paw
-                        // icon if we have no heading or bearing yet.
-                        directionGlyph(rotation: arrowRotation, color: tier.color)
-                            .frame(width: 22, height: 22)
+                    compassRose(arrowColor: tier.color, size: 28)
+                    VStack {
+                        Spacer()
                         Text(BearingMath.distanceString(meters,
                                                         useMetric: entry.snapshot.useMetric))
                             .font(.caption2.monospaced().bold())
                             .minimumScaleFactor(0.5)
                             .lineLimit(1)
                     }
-                    .padding(4)
+                    .padding(.bottom, 2)
                 }
                 .widgetURL(deepLink(for: closest.nodeNum))
             } else {
@@ -71,10 +71,8 @@ struct ComplicationView: View {
             } else if let closest = entry.closest, let meters = entry.closestMeters {
                 let described = FixAge.describe(closest.lastFix?.fixTime, now: entry.date)
                 HStack(spacing: 8) {
-                    // Big arrow on the left — primary affordance.
-                    directionGlyph(rotation: arrowRotation,
-                                   color: Color(hex: closest.colorHex) ?? .green)
-                        .frame(width: 32, height: 32)
+                    compassRose(arrowColor: Color(hex: closest.colorHex) ?? .green,
+                                size: 36)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(closest.name)
                             .font(.headline)
@@ -106,12 +104,15 @@ struct ComplicationView: View {
     private var inline: some View {
         Group {
             if let closest = entry.closest, let meters = entry.closestMeters {
-                // Inline can't render a rotated SwiftUI shape, so we use a
-                // cardinal-direction letter as a textual arrow proxy.
+                // Inline can't render a rotated SwiftUI shape, so we use
+                // a cardinal-direction letter as a textual proxy.
                 let cardinal = entry.closestBearing.map(Self.cardinal(for:)) ?? ""
-                let parts = ["\(cardinal) \(BearingMath.distanceString(meters, useMetric: entry.snapshot.useMetric))",
-                             closest.name].filter { !$0.isEmpty }
-                Text(parts.joined(separator: " · "))
+                let pieces = [
+                    cardinal.isEmpty ? nil : cardinal,
+                    BearingMath.distanceString(meters, useMetric: entry.snapshot.useMetric),
+                    closest.name,
+                ].compactMap { $0 }
+                Text(pieces.joined(separator: " · "))
             } else {
                 Text("PawMesh")
             }
@@ -119,37 +120,45 @@ struct ComplicationView: View {
         .widgetURL(entry.closest.map { deepLink(for: $0.nodeNum) } ?? rootDeepLink)
     }
 
-    // MARK: - Direction glyph
+    // MARK: - Compass rose
 
-    /// Filled arrow icon, rotated to point toward the dog. When we
-    /// don't have any bearing data, falls back to a paw print so the
+    /// Compact compass: a small "N" tick at the top of an invisible circle,
+    /// and an arrow rotated to the absolute bearing toward the dog. If we
+    /// don't have a bearing yet, falls back to a paw print so the
     /// complication never looks broken.
     @ViewBuilder
-    private func directionGlyph(rotation: Double?, color: Color) -> some View {
-        if let rotation {
-            Image(systemName: "location.north.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(color)
-                .rotationEffect(.degrees(rotation))
-        } else {
-            Image(systemName: "pawprint.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(color)
+    private func compassRose(arrowColor: Color, size: CGFloat) -> some View {
+        ZStack {
+            // North marker — small "N" pinned to the top of the rose so
+            // the user knows the arrow is anchored to true north.
+            VStack(spacing: 0) {
+                Text("N")
+                    .font(.system(size: size * 0.22, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .frame(width: size, height: size)
+
+            if let bearing = entry.closestBearing {
+                Image(systemName: "location.north.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.6, height: size * 0.6)
+                    .foregroundStyle(arrowColor)
+                    .rotationEffect(.degrees(bearing))
+            } else {
+                Image(systemName: "pawprint.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.5, height: size * 0.5)
+                    .foregroundStyle(arrowColor)
+            }
         }
+        .frame(width: size, height: size)
     }
 
-    /// Arrow rotation in degrees: prefer relative-to-user-heading,
-    /// fall back to absolute bearing (which means the arrow points to
-    /// the dog assuming "up" is north, like a paper compass).
-    private var arrowRotation: Double? {
-        if let a = entry.arrowAngle { return a }
-        return entry.closestBearing
-    }
-
-    /// 8-point cardinal label (N, NE, E, SE, S, SW, W, NW) for a
-    /// 0..360 bearing.
+    /// 8-point cardinal label (N, NE, E, SE, S, SW, W, NW) for a 0..360
+    /// bearing.
     private static func cardinal(for bearing: Double) -> String {
         let labels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
         let normalized = ((bearing.truncatingRemainder(dividingBy: 360)) + 360)
