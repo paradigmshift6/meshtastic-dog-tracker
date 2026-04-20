@@ -1,5 +1,8 @@
 import SwiftUI
 @preconcurrency import MapLibre
+import OSLog
+
+private let mapLog = Logger(subsystem: "com.levijohnson.DogTracker", category: "Map")
 
 /// Posted before an mbtiles file is deleted so the map can release its SQLite handle.
 extension Notification.Name {
@@ -58,8 +61,13 @@ struct DogMapView: UIViewRepresentable {
         private var currentAnnotations: [String: MLNPointAnnotation] = [:]
         private var markerColors: [String: String] = [:]
         private var markerPhotos: [String: UIImage] = [:]
-        private var currentTrails: [UInt32: MLNPolyline] = [:]
-        private var trailColors: [UInt32: String] = [:]
+        // Trails are rendered as style layers (MLNShapeSource + MLNLineStyleLayer)
+        // rather than legacy annotations, because annotation polylines can be
+        // hidden by manually-added raster style layers due to z-order quirks.
+        // One source + one line layer per tracker so each trail can have its
+        // own color expression.
+        private var trailSources: [UInt32: MLNShapeSource] = [:]
+        private var trailLayers: [UInt32: MLNLineStyleLayer] = [:]
         private var tileSourceAdded = false
         /// Path of the currently loaded mbtiles file, so we know if it changed.
         private var loadedMBTilesPath: String?
@@ -182,73 +190,67 @@ struct DogMapView: UIViewRepresentable {
         }
 
         func updateTrails(on mapView: MLNMapView, trails: [DogTrail]) {
+            guard let style = mapView.style else { return }
             var nextIDs = Set<UInt32>()
 
             for trail in trails {
                 guard trail.coordinates.count >= 2 else { continue }
                 nextIDs.insert(trail.nodeNum)
-                trailColors[trail.nodeNum] = trail.colorHex
 
                 var coords = trail.coordinates.map {
                     CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)
                 }
 
-                // Diagnostic: log span of the trail so we can tell whether
-                // a "missing" trail is actually rendering but sub-pixel
-                // (dog hasn't moved enough vs. an actual rendering bug).
+                // Diagnostic: log span so we can tell "invisible trail" from
+                // "trail too short to see" at a glance.
                 let lats = coords.map(\.latitude)
                 let lons = coords.map(\.longitude)
                 let latSpan = (lats.max() ?? 0) - (lats.min() ?? 0)
                 let lonSpan = (lons.max() ?? 0) - (lons.min() ?? 0)
-                let approxMeters = max(latSpan, lonSpan) * 111_000  // crude: 1° lat ≈ 111km
-                print("[Trail] node=\(String(format: "%08x", trail.nodeNum)) " +
-                      "points=\(coords.count) span≈\(Int(approxMeters))m")
+                let approxMeters = max(latSpan, lonSpan) * 111_000
+                mapLog.info("[Trail] node=\(String(format: "%08x", trail.nodeNum)) points=\(coords.count) span≈\(Int(approxMeters))m")
 
-                // Always replace the existing polyline. MLNPolyline doesn't
-                // let us mutate coordinates in place, and the previous
-                // pointCount-based branch was dead code (both arms did the
-                // same replace).
-                if let existing = currentTrails[trail.nodeNum] {
-                    mapView.removeAnnotation(existing)
-                }
-                let polyline = MLNPolyline(coordinates: &coords, count: UInt(coords.count))
-                mapView.addAnnotation(polyline)
-                currentTrails[trail.nodeNum] = polyline
-            }
+                let polyline = MLNPolylineFeature(coordinates: &coords, count: UInt(coords.count))
 
-            // Remove trails for trackers no longer present
-            for (nodeNum, polyline) in currentTrails where !nextIDs.contains(nodeNum) {
-                mapView.removeAnnotation(polyline)
-                currentTrails.removeValue(forKey: nodeNum)
-                trailColors.removeValue(forKey: nodeNum)
-            }
-        }
+                if let source = trailSources[trail.nodeNum] {
+                    source.shape = polyline
+                } else {
+                    // First time we've seen this tracker — create source + layer.
+                    let sourceID = "trail-src-\(trail.nodeNum)"
+                    let layerID = "trail-lyr-\(trail.nodeNum)"
+                    let source = MLNShapeSource(identifier: sourceID,
+                                                shape: polyline,
+                                                options: nil)
+                    style.addSource(source)
+                    trailSources[trail.nodeNum] = source
 
-        func mapView(_ mapView: MLNMapView, strokeColorForShapeAnnotation annotation: MLNShape) -> UIColor {
-            if let polyline = annotation as? MLNPolyline {
-                // Find matching trail color
-                for (nodeNum, trail) in currentTrails where trail === polyline {
-                    if let hex = trailColors[nodeNum] {
-                        return UIColor(hex: hex) ?? .systemRed
-                    }
+                    let layer = MLNLineStyleLayer(identifier: layerID, source: source)
+                    layer.lineColor = NSExpression(
+                        forConstantValue: UIColor(hex: trail.colorHex) ?? .systemRed
+                    )
+                    layer.lineWidth = NSExpression(forConstantValue: 5)
+                    layer.lineOpacity = NSExpression(forConstantValue: 0.9)
+                    layer.lineCap = NSExpression(forConstantValue: "round")
+                    layer.lineJoin = NSExpression(forConstantValue: "round")
+                    style.addLayer(layer)
+                    trailLayers[trail.nodeNum] = layer
                 }
             }
-            // Fallback: bright red so missing-color cases are visually
-            // obvious instead of silently blending into water features.
-            return .systemRed
+
+            // Remove sources + layers for trackers no longer present.
+            for (nodeNum, layer) in trailLayers where !nextIDs.contains(nodeNum) {
+                style.removeLayer(layer)
+                trailLayers.removeValue(forKey: nodeNum)
+            }
+            for (nodeNum, source) in trailSources where !nextIDs.contains(nodeNum) {
+                style.removeSource(source)
+                trailSources.removeValue(forKey: nodeNum)
+            }
         }
 
-        func mapView(_ mapView: MLNMapView, alphaForShapeAnnotation annotation: MLNShape) -> CGFloat {
-            // Slight transparency so the trail doesn't completely hide the
-            // basemap underneath but is still solidly visible.
-            0.9
-        }
-
-        func mapView(_ mapView: MLNMapView, lineWidthForPolylineAnnotation annotation: MLNPolyline) -> CGFloat {
-            // Wider line so trails are visible even when the dog hasn't
-            // moved much. 5pt is roughly the same width as a basemap road.
-            5.0
-        }
+        // Trail polylines are rendered via MLNShapeSource + MLNLineStyleLayer
+        // (see updateTrails). Colors / widths are set on the style layer
+        // directly; no shape-annotation delegate methods are needed.
 
         func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
             // Returning a view for a multi-point shape (polylines, polygons)
