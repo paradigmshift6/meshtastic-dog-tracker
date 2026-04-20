@@ -8,6 +8,7 @@ import CoreLocation
 /// the staleness color stay live without us pushing context every tick.
 struct WatchCompassPage: View {
     @Environment(WatchSession.self) private var session
+    @Environment(WatchHeadingProvider.self) private var heading
     let tracker: TrackerSnapshot
 
     /// Drives a 1Hz re-render so the fix-age label and color tier update
@@ -22,6 +23,7 @@ struct WatchCompassPage: View {
             arrow
             distance
             fixAgeRow
+            calibrationWarning
             Spacer(minLength: 0)
             pingButton
         }
@@ -29,18 +31,49 @@ struct WatchCompassPage: View {
         .onReceive(tick) { now = $0 }
     }
 
+    /// Shown when the watch's compass is poorly calibrated — the arrow
+    /// can silently be 40-90° off and the user has no way to know. Prompts
+    /// the figure-8 dance until accuracy improves.
+    @ViewBuilder private var calibrationWarning: some View {
+        if let acc = heading.accuracy, acc > 40, heading.trueHeading != nil {
+            HStack(spacing: 3) {
+                Image(systemName: "location.north.circle")
+                    .font(.caption2)
+                Text("Calibrate (figure-8)")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.yellow)
+        }
+    }
+
     // MARK: - Header
 
     private var header: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(Color(hex: tracker.colorHex) ?? .green)
-                .frame(width: 10, height: 10)
+            trackerBadge
             Text(tracker.name)
                 .font(.headline)
                 .lineLimit(1)
             Spacer(minLength: 0)
             linkBadge
+        }
+    }
+
+    /// Dog photo if we have one, else a solid colored dot. Matches the
+    /// iOS map marker style so the two screens feel like one app.
+    @ViewBuilder private var trackerBadge: some View {
+        let color = Color(hex: tracker.colorHex) ?? .green
+        if let data = tracker.photoThumbnail, let img = UIImage(data: data) {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 22, height: 22)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(color, lineWidth: 2))
+        } else {
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
         }
     }
 
@@ -69,8 +102,11 @@ struct WatchCompassPage: View {
         let userCoord = CLLocationCoordinate2D(latitude: user.latitude, longitude: user.longitude)
         let dogCoord = CLLocationCoordinate2D(latitude: fix.latitude, longitude: fix.longitude)
         let bearing = BearingMath.bearing(from: userCoord, to: dogCoord)
-        let heading = user.trueHeading ?? 0
-        return bearing - heading
+        // Prefer the watch's own magnetometer so the arrow re-orients live
+        // as the user turns their wrist. Fall back to the phone's heading
+        // if the watch has no compass hardware (pre-Series 5).
+        let userHeading = heading.trueHeading ?? user.trueHeading ?? 0
+        return bearing - userHeading
     }
 
     private var distanceMeters: Double? {
@@ -158,6 +194,11 @@ struct WatchCompassPage: View {
     }
 
     private var pingActionButton: some View {
+        // Only disable when the phone-radio link itself is down — tapping
+        // when the phone app is backgrounded should still work: sendMessage
+        // wakes the iOS app long enough to process the request. If the
+        // phone isn't reachable at all, sendPing surfaces that as an error
+        // rather than silently no-op'ing.
         Button {
             session.sendPing(to: tracker.nodeNum)
         } label: {
@@ -165,6 +206,6 @@ struct WatchCompassPage: View {
                 .font(.caption.bold())
         }
         .controlSize(.small)
-        .disabled(session.snapshot.linkState != .connected || !session.isReachable)
+        .disabled(session.snapshot.linkState == .disconnected)
     }
 }

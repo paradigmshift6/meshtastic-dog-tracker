@@ -1,34 +1,20 @@
 import SwiftUI
 
-/// Top-level watch UI. One swipeable page per tracker, plus an empty-state
-/// page if the phone hasn't sent any trackers yet.
+/// Top-level watch UI. Navigation root: a list of assigned dogs. Tapping
+/// one pushes the full-screen compass page for that tracker.
+///
+/// Empty state takes over when we haven't yet received a snapshot with
+/// any trackers (or when the phone is disconnected from the radio).
 struct WatchCompassScreen: View {
     @Environment(WatchSession.self) private var session
-    @State private var selection: UInt32 = 0
 
     var body: some View {
-        Group {
+        NavigationStack {
             if session.snapshot.trackers.isEmpty {
                 WatchEmptyState(linkState: session.snapshot.linkState,
                                 isActivated: session.isActivated)
             } else {
-                TabView(selection: $selection) {
-                    ForEach(session.snapshot.trackers) { tracker in
-                        WatchCompassPage(tracker: tracker)
-                            .tag(tracker.nodeNum)
-                    }
-                }
-                .tabViewStyle(.verticalPage)
-                .onAppear {
-                    if !session.snapshot.trackers.contains(where: { $0.nodeNum == selection }) {
-                        selection = session.snapshot.trackers.first?.nodeNum ?? 0
-                    }
-                }
-                .onChange(of: session.snapshot.trackers.map(\.nodeNum)) { _, ids in
-                    if !ids.contains(selection), let first = ids.first {
-                        selection = first
-                    }
-                }
+                WatchDogsListScreen()
             }
         }
     }

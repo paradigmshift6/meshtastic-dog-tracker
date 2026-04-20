@@ -32,6 +32,10 @@ struct TrackerSnapshot: Codable, Equatable, Identifiable {
     var nodeNum: UInt32
     var name: String
     var colorHex: String
+    /// Thumbnail JPEG (~64x64) of the dog's photo, or nil if no photo set.
+    /// Kept small so the whole FleetSnapshot fits in the 64KB
+    /// `updateApplicationContext` budget.
+    var photoThumbnail: Data?
     var lastFix: FixSnapshot?
     var batteryPercent: UInt32?
     var isBatteryLow: Bool

@@ -20,6 +20,8 @@
 	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
 	<string>2</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PawMesh reads your watch's compass so the arrow points toward each dog as you turn your wrist.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>

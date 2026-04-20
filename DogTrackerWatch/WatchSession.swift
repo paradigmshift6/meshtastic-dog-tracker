@@ -58,11 +58,7 @@ final class WatchSession: NSObject {
     func sendPing(to nodeNum: UInt32) {
         let session = WCSession.default
         guard session.activationState == .activated else {
-            pingState = .error("Watch not connected to phone")
-            return
-        }
-        guard session.isReachable else {
-            pingState = .error("Phone not reachable")
+            pingState = .error("Watch not paired yet")
             return
         }
 
@@ -71,6 +67,10 @@ final class WatchSession: NSObject {
             WatchWireKey.op: WatchWireOp.ping,
             WatchWireKey.nodeNum: nodeNum,
         ]
+        // Try sendMessage first — it's interactive and wakes the iOS app in
+        // the background. If unreachable it errors immediately; fall through
+        // to transferUserInfo so the request queues until the phone comes
+        // back online.
         session.sendMessage(message, replyHandler: { [weak self] reply in
             Task { @MainActor in
                 guard let self else { return }
@@ -82,9 +82,14 @@ final class WatchSession: NSObject {
                     self.pingState = .error(err)
                 }
             }
-        }, errorHandler: { [weak self] error in
+        }, errorHandler: { [weak self] _ in
+            // sendMessage failed (usually phone unreachable). Queue via
+            // transferUserInfo as a fallback so the ping still fires next
+            // time the phone wakes.
             Task { @MainActor in
-                self?.pingState = .error(error.localizedDescription)
+                guard let self else { return }
+                _ = session.transferUserInfo(message)
+                self.pingState = .error("Phone asleep — queued, will retry")
             }
         })
     }

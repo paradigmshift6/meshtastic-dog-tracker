@@ -84,6 +84,9 @@ targets:
         WKCompanionAppBundleIdentifier: com.levijohnson.DogTracker
         WKWatchOnly: false
         WKRunsIndependentlyOfCompanionApp: false
+        NSLocationWhenInUseUsageDescription: >-
+          PawMesh reads your watch's compass so the arrow points
+          toward each dog as you turn your wrist.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.levijohnson.DogTracker.watchkitapp

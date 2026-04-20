@@ -3,6 +3,7 @@ import Observation
 import SwiftData
 import WatchConnectivity
 import CoreLocation
+import UIKit
 import OSLog
 
 /// iOS side of the WatchConnectivity bridge.
@@ -133,6 +134,7 @@ final class PhoneWatchSession: NSObject {
                 nodeNum: tracker.nodeNum,
                 name: tracker.name,
                 colorHex: tracker.colorHex,
+                photoThumbnail: Self.watchThumbnail(from: tracker.photoData),
                 lastFix: fix,
                 batteryPercent: node?.batteryLevel,
                 isBatteryLow: node?.isBatteryLow ?? false
@@ -235,12 +237,7 @@ extension PhoneWatchSession: WCSessionDelegate {
         // WCSession bridges Swift integers as NSNumber on the wire, so
         // accept any numeric form and coerce to UInt32.
         let op = message[WatchWireKey.op] as? String
-        let nodeNum: UInt32 = {
-            if let n = message[WatchWireKey.nodeNum] as? NSNumber {
-                return n.uint32Value
-            }
-            return 0
-        }()
+        let nodeNum = Self.parseNodeNum(message)
 
         Task { @MainActor in
             switch op {
@@ -263,6 +260,64 @@ extension PhoneWatchSession: WCSessionDelegate {
                 ])
             }
         }
+    }
+
+    /// Handles the queued fallback from the watch: when the phone was asleep
+    /// and the watch couldn't use `sendMessage`, it falls back to
+    /// `transferUserInfo`, which lands here whenever the iOS app wakes up.
+    nonisolated func session(_ session: WCSession,
+                             didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        let op = userInfo[WatchWireKey.op] as? String
+        let nodeNum = Self.parseNodeNum(userInfo)
+
+        Task { @MainActor in
+            if op == WatchWireOp.ping && nodeNum != 0 {
+                do {
+                    _ = try await self.mesh.requestPosition(from: nodeNum)
+                    self.log.info("queued ping replayed for \(nodeNum, format: .hex)")
+                } catch {
+                    self.log.error("queued ping replay for \(nodeNum, format: .hex) failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    nonisolated private static func parseNodeNum(_ message: [String: Any]) -> UInt32 {
+        if let n = message[WatchWireKey.nodeNum] as? NSNumber {
+            return n.uint32Value
+        }
+        return 0
+    }
+
+    /// Produces a ~64x64 JPEG from the tracker's full-res photo so it can
+    /// be shipped in the FleetSnapshot dictionary without blowing past the
+    /// 64KB applicationContext cap. Returns nil on failure or no input.
+    nonisolated private static func watchThumbnail(from photoData: Data?) -> Data? {
+        guard let photoData, let src = UIImage(data: photoData) else { return nil }
+        let target: CGFloat = 64
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: target, height: target),
+            format: {
+                let f = UIGraphicsImageRendererFormat()
+                f.scale = 1
+                f.opaque = true
+                return f
+            }()
+        )
+        let resized = renderer.image { _ in
+            // Aspect-fill crop to a square so the watch can render as a circle.
+            let aspect = src.size.width / src.size.height
+            let drawSize: CGSize
+            if aspect > 1 {
+                drawSize = CGSize(width: target * aspect, height: target)
+            } else {
+                drawSize = CGSize(width: target, height: target / aspect)
+            }
+            let x = (target - drawSize.width) / 2
+            let y = (target - drawSize.height) / 2
+            src.draw(in: CGRect(x: x, y: y, width: drawSize.width, height: drawSize.height))
+        }
+        return resized.jpegData(compressionQuality: 0.65)
     }
 }
 
